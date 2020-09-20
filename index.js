@@ -2,6 +2,8 @@ import http from 'http';
 import express from 'express';
 import RED from 'node-red';
 
+import auth from './middlewares/auth'
+
 class NodeREDRunner {
     constructor() {
         /**
@@ -83,14 +85,8 @@ class NodeREDRunner {
         // Create a server
         this.server = http.createServer(this.app);
 
-        //setup basic authentication (Please uncomment if required)
-        /* 
-        const basicAuth = require('basic-auth-connect');
-        const atob = require('atob');
-        this.app.use(basicAuth((user, pass) => {
-            return user === process.env.NR_USER || 'test' && pass === atob(process.env.PASS_HASH || 'dGVzdA==');
-        }));
-        */
+        //setup basic authentication
+        this.app.use(auth);
 
         // Initialize the runtime with a server and settings
         RED.init(this.server, this.redSettings);
