@@ -4,6 +4,7 @@
   "description": "Wrapper for run NodeRED in shared NodeJS hosting services ex- alwaysdata, OpenShift",
   "main": "index.js",
   "scripts": {
+    "start": "node -r esm index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -11,9 +12,11 @@
     "url": "git+https://github.com/hasithaishere/nodered-runner.git"
   },
   "keywords": [
-    "NodeRED"
+    "NodeRED",
+    "Alwaysdata",
+    "OpenShift"
   ],
-  "author": "Hasitha Gamage",
+  "author": "Hasitha Gamage <hasitha.hpmax@gmail.com> (https://hasitha.xyz/)",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/hasithaishere/nodered-runner/issues"
@@ -22,6 +25,7 @@
   "dependencies": {
     "atob": "^2.1.2",
     "basic-auth-connect": "^1.0.0",
+    "esm": "^3.2.25",
     "express": "^4.17.1",
     "node-red": "^1.1.3"
   }

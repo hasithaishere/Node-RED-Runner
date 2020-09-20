@@ -1,54 +1,37 @@
-const http = require('http');
-const express = require("express");
-const RED = require("node-red");
-const atob = require('atob');
+import http from 'http';
+import express from 'express';
+import RED from 'node-red';
 
-const MyRed = function() {
+class NodeREDRunner {
+    constructor() {
+        /**
+         *  Set up server IP address and port # using env variables/defaults.
+         */
+        this.ip = process.env.NR_IP || '127.0.0.1';
+        this.port = process.env.NR_PORT || 8100;
+        this.redSettings = {
+            httpAdminRoot:'/',
+            httpNodeRoot: '/api',
+            userDir: process.env.DATA_DIR || './'
+        };
 
-    //  Scope.
-    const self = this;
+        this.routes = {};
 
+        // Initialization
+        this.setupTerminationHandlers();
+        this.initializeServer();
+    }
 
     /*  ================================================================  */
     /*  Helper functions.                                                 */
-    /*  ================================================================  */
-
-    /**
-     *  Set up server IP address and port # using env variables/defaults.
-     */
-    self.setupVariables = function() {
-        //  Set the environment variables we need.
-        self.ipaddress = process.env.NODEJS_IP;
-        self.port      = process.env.NODEJS_PORT || 8100;
-
-        if (typeof self.ipaddress === "undefined") {
-            //  Log errors on Server but continue w/ 127.0.0.1 - this
-            //  allows us to run/test the app locally.
-            console.warn('No NODEJS_IP var, using 127.0.0.1');
-            self.ipaddress = "127.0.0.1";
-        };
-
-
-
-        // Create the settings object
-        self.redSettings = {
-            httpAdminRoot:"/",
-            httpNodeRoot: "/api",
-            userDir: process.env.DATA_DIR
-        };
-
-        if (typeof self.redSettings.userDir === "undefined") {
-            console.warn('No DATA_DIR var, using ./');
-            self.redSettings.userDir = "./";
-        }
-    };
+    /*  ================================================================  */                    
 
      /**
      *  terminator === the termination handler
      *  Terminate server on receipt of the specified signal.
      *  @param {string} sig  Signal to terminate on.
      */
-    self.terminator = function(sig){
+    terminator(sig) {
         if (typeof sig === "string") {
            console.log('%s: Received %s - terminating app ...',
                        Date(Date.now()), sig);
@@ -61,15 +44,15 @@ const MyRed = function() {
     /**
      *  Setup termination handlers (for exit and a list of signals).
      */
-    self.setupTerminationHandlers = function(){
+    setupTerminationHandlers() {
         //  Process on exit and signals.
-        process.on('exit', function() { self.terminator(); });
+        process.on('exit', () => { this.terminator(); });
 
         // Removed 'SIGPIPE' from the list - bugz 852598.
         ['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGILL', 'SIGTRAP', 'SIGABRT',
          'SIGBUS', 'SIGFPE', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGTERM'
-        ].forEach(function(element, index, array) {
-            process.on(element, function() { self.terminator(element); });
+        ].forEach((element) => {
+            process.on(element, () => { this.terminator(element); });
         });
     };
 
@@ -80,10 +63,8 @@ const MyRed = function() {
     /**
      *  Create the routing table entries + handlers for the application.
      */
-    self.createRoutes = function() {
-        self.routes = { };
-
-        self.routes['/asciimo'] = function(req, res) {
+    createRoutes() {
+        this.routes['/asciimo'] = (req, res) => {
             var link = "http://i.imgur.com/kmbjB.png";
             res.send("<html><body><img src='" + link + "'></body></html>");
         };
@@ -93,59 +74,51 @@ const MyRed = function() {
      *  Initialize the server (express) and create the routes and register
      *  the handlers.
      */
-    self.initializeServer = function() {
-        self.createRoutes();
+    initializeServer() {
+        this.createRoutes();
 
         // Create an Express app
-        self.app = express();
+        this.app = express();
 
         // Create a server
-        self.server = http.createServer(self.app);
+        this.server = http.createServer(this.app);
 
-        //setup basic authentication
-        var basicAuth = require('basic-auth-connect');
-        self.app.use(basicAuth(function(user, pass) {
+        //setup basic authentication (Please uncomment if required)
+        /* 
+        const basicAuth = require('basic-auth-connect');
+        const atob = require('atob');
+        this.app.use(basicAuth((user, pass) => {
             return user === process.env.NR_USER || 'test' && pass === atob(process.env.PASS_HASH || 'dGVzdA==');
         }));
+        */
 
-        // Initialise the runtime with a server and settings
-        RED.init(self.server, self.redSettings);
-        console.log('%s is the userDir for RED', self.redSettings.userDir);
+        // Initialize the runtime with a server and settings
+        RED.init(this.server, this.redSettings);
+        console.log('%s is the userDir for RED', this.redSettings.userDir);
 
         // Serve the editor UI from /red
-        self.app.use(self.redSettings.httpAdminRoot,RED.httpAdmin);
+        this.app.use(this.redSettings.httpAdminRoot,RED.httpAdmin);
 
         // Serve the http nodes UI from /api
-        self.app.use(self.redSettings.httpNodeRoot,RED.httpNode);
+        this.app.use(this.redSettings.httpNodeRoot,RED.httpNode);
 
         // Add a simple route for static content served from 'public'
         //self.app.use("/",express.static("public"));
 
         //  Add handlers for the app (from the routes).
-        for (var r in self.routes) {
-            self.app.get(r, self.routes[r]);
+        for (let r in this.routes) {
+            this.app.get(r, this.routes[r]);
         }
-    };
-
-    /**
-     *  Initializes the sample application.
-     */
-    self.initialize = function() {
-        self.setupVariables();
-        self.setupTerminationHandlers();
-
-        // Create the express server and routes.
-        self.initializeServer();
     };
 
     /**
      *  Start the server (starts up the sample application).
      */
-    self.start = function() {
+    start() {
         //  Start the app on the specific interface (and port).
-        self.server.listen(self.port, function() {
+        this.server.listen(this.port, () => {
             console.log('%s: Node server started on %s:%d ...',
-                        Date(Date.now() ), self.ipaddress, self.port);
+                        Date(Date.now() ), this.ip, this.port);
         });
 
         // Start the runtime
@@ -156,6 +129,5 @@ const MyRed = function() {
 /**
  *  main():  Main code.
  */
-var red = new MyRed();
-red.initialize();
-red.start();
+const runner = new NodeREDRunner();
+runner.start();
