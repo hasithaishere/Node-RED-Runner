@@ -85,6 +85,9 @@ class NodeREDRunner {
         // Create a server
         this.server = http.createServer(this.app);
 
+        // Health endpoint
+        this.app.get('/health', (req, res) => { res.json({ status: 'healthy' }) });
+
         //setup basic authentication
         this.app.use(auth);
 
